@@ -5,15 +5,13 @@ let dotColor;
 let dotColorActive;
 let spikeColor;
 let spikeColorActive;
-let eventColor;
 let rectColor;
 
 // params for fake spike data
-let nNeurons = 20;
+let nNeurons = 5;
 let minRate = 0.025;
 let maxRate = 0.1;
-let nTimesteps = 5000; // total number of timesteps
-let maxDelay = 100;
+let nTimesteps = 2000; // total number of timesteps
 
 // params for counting spikes
 let binSize = 200;
@@ -21,7 +19,6 @@ let strideSize = 1;
 let timestepsPerFrame = 3;
 
 // for creating fake data
-let inputData;
 let spikeTimes;
 
 let t;
@@ -33,94 +30,21 @@ let pts;
 let mouseInds;
 let prevMouseInds;
 
-function makeInputs(nTimesteps) {
-  let min_iti = 400;
-  let max_iti = 700;
-  let min_isi = binSize;
-  let max_isi = binSize + 500;
-  let nextStimTime = 200 + binSize;
-  let nextRewTime = -1;
-
-  // create stimuli and rewards
-  let stims = [];
-  let rews = [];
-  let stimTimes = [];
-  let rewTimes = [];
-  for (let t = 0; t < nTimesteps; t++) {
-    if (t === nextStimTime) {
-      stims.push(1);
-      rews.push(0);
-      stimTimes.push(t);
-      nextStimTime = -1;
-      nextRewTime = t + floor(random(min_isi, max_isi));
-    } else if (t === nextRewTime) {
-      rews.push(1);
-      stims.push(0);
-      rewTimes.push(t);
-      nextStimTime = t + floor(random(min_iti, max_iti));
-      nextRewTime = -1;
-    } else if (nextStimTime === -1) {
-      stims.push(1);
-      rews.push(0);
-      stimTimes.push(t);
-    } else {
-      stims.push(0);
-      rews.push(0);
-    }
-  }
-  return [stims, rews, stimTimes, rewTimes];
-}
-
-function makeSpikeTimes(inputData, nNeurons, minRate, maxRate, nTimesteps) {
-  let rates = [];
-  for (let j = 0; j < nNeurons; j++) {
-    let pBase = random(0.02, 0.03);
-    // let pStim = 0.1;
-    // let pRew = 0.05;
-    let delay = floor(random(1, maxDelay));
-    let pStim = constrain(pBase + random(minRate, maxRate), minRate, maxRate);
-    let pRew = constrain(pBase + random(minRate, maxRate), minRate, maxRate);
-    rates.push([pBase, pStim, pRew, delay]);
-  }
-  return makeSpikeTimesFromRates(inputData, rates, nTimesteps);
-}
-
-function makeSpikeTimesFromRates(inputData, rates, nTimesteps) {
-  // init spike time tracking
+function makeAllSpikeTimes(nNeurons, minRate, maxRate, nTimesteps) {
   let sps = [];
-  for (let j = 0; j < rates.length; j++) {
-    sps.push([]);
+  for (let j = 0; j < nNeurons; j++) {
+    let p = random(minRate, maxRate);
+    sps.push(makeSpikeTimes(p, nTimesteps));
   }
+  return sps;
+}
 
-  let cStim = 0;
-  let cRew = 0;
-  let decayStim = 0.98; // time constant for stim
-  let decayRew = 0.98; // time constant for rew
-
-  let inputs = [];
-  for (let t = 0; t < maxDelay; t++) {
-    inputs.push([0, 0]);
-  }
-
+function makeSpikeTimes(p, nTimesteps) {
+  let sps = [];
   for (let t = 0; t < nTimesteps; t++) {
-    if (inputData[0][t] === 1) {
-      cStim = 1;
-    } else {
-      cStim = cStim*decayStim;
-    }
-    if (inputData[1][t] === 1) {
-      cRew = 1;
-    } else {
-      cRew = cRew*decayRew;
-    }
-    inputs.push([cStim, cRew]);
-    for (let j = 0; j < rates.length; j++) {
-      let delay = rates[j][3];
-      let tCur = t+maxDelay-1-delay;
-      let pCur = rates[j][0] + inputs[tCur][0]*rates[j][1] + inputs[tCur][1]*rates[j][2];
-      if (random(0,1) < pCur) {
-        sps[j].push(t);
-      }
+    let scale = 1;
+    if (random(0,1) < scale*p) {
+      sps.push(t);
     }
   }
   return sps;
@@ -134,21 +58,19 @@ function setup() {
   spikeColor = color(255, 204, 0, 128);
   spikeColorActive = color(255, 204, 0, 255);
   rectColor = color(255, 0, 0, 100);
-  eventColor = 'blue';
   
   t = 0;
   pts = [];
   
   // create fake spike times
-  inputData = makeInputs(nTimesteps);
-  spikeTimes = makeSpikeTimes(inputData, nNeurons, minRate, maxRate, nTimesteps);
+  spikeTimes = makeAllSpikeTimes(nNeurons, minRate, maxRate, nTimesteps);
   
   rasterWidth = windowWidth/2;
   rasterHeight = windowHeight;
 
-  // make room for one inputs
-  padding = windowHeight / (nNeurons+1);
-  rasterPosY = 1*padding;
+  // make room for two inputs
+  padding = windowHeight / (nNeurons+2);
+  rasterPosY = 2*padding;
   rasterHeight = windowHeight - rasterPosY;
 
   prevMouseInds = getHighlightedInds();
@@ -186,21 +108,6 @@ function getHighlightedInds() {
 
 function getNeuronHeight(j) {
   return rasterPosY + padding*j + padding/2;
-}
-
-function drawInputData(inputData, t) {
-  strokeWeight(2);
-  let eventTimes = [inputData[2]];//, inputData[3]];
-  for (let j = 0; j < eventTimes.length; j++) {
-    for (let i = 0; i < eventTimes[j].length; i++) {
-      let y = getNeuronHeight(j) - 1*padding;
-      let x = eventTimes[j][i] - t;
-      if (x < rasterWidth) {
-        stroke(eventColor);
-        line(x, y - 0.8*padding/2, x, y + 0.8*padding/2);
-      }
-    }
-  }
 }
 
 function drawRasterAndCountSpikes(spikeTimes, t) {
@@ -251,14 +158,13 @@ function draw() {
   t = (t + timestepsPerFrame) % nTimesteps;
   
   // clear scatter points when time is up
-  if (t < timestepsPerFrame) { pts = []; }
+  if (t === 0) { pts = []; }
   
   // draw solid background
   background(bgColor);
   
   // draw and count spikes
   counts = drawRasterAndCountSpikes(spikeTimes, t);
-  drawInputData(inputData, t);
   
   // save spike count vector every stride
   if (t > binSize && t % strideSize === 0) {
