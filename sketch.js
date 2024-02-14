@@ -1,4 +1,5 @@
 // color vars
+let bgColor;
 let axisColor;
 let dotColor;
 let dotColorActive;
@@ -7,7 +8,7 @@ let spikeColorActive;
 let rectColor;
 
 // params for fake spike data
-let nNeurons = 20;
+let nNeurons = 5;
 let minRate = 0.025;
 let maxRate = 0.1;
 let nTimesteps = 2000; // total number of timesteps
@@ -20,9 +21,9 @@ let timestepsPerFrame = 3;
 let t;
 let spikeTimes;
 let padding;
+let rasterPosY;
 let rasterHeight;
 let rasterWidth;
-let counts;
 let pts;
 let mouseInds;
 let prevMouseInds;
@@ -51,6 +52,7 @@ function makeSpikeTimes(p, nTimesteps) {
 }
 
 function setup() {
+  bgColor = 'black';
   axisColor = 'white';
   dotColor = color(255, 0, 0, 10);
   dotColorActive = color(255, 0, 0, 180);
@@ -64,15 +66,14 @@ function setup() {
   // create fake spike times
   spikeTimes = makeAllSpikeTimes(nNeurons, minRate, maxRate, nTimesteps);
   
-  // initialize spike count vector
-  counts = [];
-  for (let j = 0; j < nNeurons; j++) {
-    counts.push(0);
-  }
-  
-  rasterHeight = windowHeight;
   rasterWidth = windowWidth/2;
-  padding = rasterHeight / nNeurons;
+  rasterHeight = windowHeight;
+
+  // make room for two inputs
+  padding = windowHeight / (nNeurons+2);
+  rasterPosY = 2*padding;
+  rasterHeight = windowHeight - rasterPosY;
+
   prevMouseInds = getHighlightedInds();
   createCanvas(windowWidth, windowHeight);
 }
@@ -102,49 +103,21 @@ function drawScatter(pts, counts, xi, yi) {
 }
 
 function getHighlightedInds() {
-  let mouseInd = floor(map(mouseY, 0, rasterHeight, 0, nNeurons));
+  let mouseInd = floor(map(constrain(mouseY, rasterPosY, rasterPosY+rasterHeight), rasterPosY, rasterPosY+rasterHeight, 0, nNeurons-1));
   return [mouseInd, mouseInd+1];
 }
 
 function getNeuronHeight(j) {
-  return padding*j + padding/2;
+  return rasterPosY + padding*j + padding/2;
 }
 
-function draw() {
-  t = (t + timestepsPerFrame) % nTimesteps;
-  
-  // clear scatter points
-  if (t === 0) { pts = []; }
-  
-  // save spike count every stride
-  if (t > binSize && t % strideSize === 0) {
-    let copyCounts = [];
-    for (let j = 0; j < counts.length; j++) {
-      copyCounts.push(counts[j]);
-    }
-    pts.push(copyCounts);
-  }
-  background(0);
-  
-  mouseInds = getHighlightedInds();
-  
-  // if mouseInds changed since last time, clear pts
-  if (mouseInds[0] != prevMouseInds[0]) {
-    pts = [];
-  }
-  prevMouseInds = mouseInds;
-  
-  // draw scatter of spike rates
-  drawScatter(pts, counts, mouseInds[0], mouseInds[1]);
-  
-  // clear counts
-  for (let j = 0; j < counts.length; j++) {
-    counts[j] = 0;
-  }
-  
-  // draw spikes
+function drawRasterAndCountSpikes(t) {
+
   strokeWeight(2);
+  let counts = [];
+
   for (let j = 0; j < spikeTimes.length; j++) {
+    let count = 0;
     for (let i = 0; i < spikeTimes[j].length; i++) {
       let y = getNeuronHeight(j);
       // let x = t - spikeTimes[j][i] + rasterWidth;
@@ -156,15 +129,18 @@ function draw() {
         } else if (x > rasterWidth/2 + binSize/2) {
         } else {
           clr = spikeColorActive;
-          counts[j] = counts[j] + 1;
+          count += 1;
         }
         stroke(clr);
         line(x, y - 0.8*padding/2, x, y + 0.8*padding/2);
       }
     }
+    counts.push(count);
   }
-  
-  // draw red window
+  return counts;
+}
+
+function drawRectHighlighter() {
   fill(rectColor);
   noStroke();
   // rect(rasterWidth/2 - binSize/2, 2, binSize, rasterHeight-4);
@@ -176,5 +152,36 @@ function draw() {
     rect(rasterWidth/2 - binSize/2, getNeuronHeight(mouseInds[0])- padding/2, binSize, padding);
     rect(rasterWidth/2 - binSize/2, getNeuronHeight(mouseInds[1])- padding/2, binSize, padding);
   }
+}
+
+function draw() {
+  // update time step
+  t = (t + timestepsPerFrame) % nTimesteps;
   
+  // clear scatter points when time is up
+  if (t === 0) { pts = []; }
+  
+  // draw solid background
+  background(bgColor);
+  
+  // draw and count spikes
+  counts = drawRasterAndCountSpikes(t);
+  
+  // save spike count vector every stride
+  if (t > binSize && t % strideSize === 0) {
+    pts.push(counts.slice());
+  }
+
+  // get currently updated mouse inds
+  mouseInds = getHighlightedInds();
+  // if mouseInds changed since last time, clear pts
+  if (mouseInds[0] != prevMouseInds[0]) {
+    pts = [];
+  }
+  prevMouseInds = mouseInds;
+
+  // draw scatter of spike rates
+  drawScatter(pts, counts, mouseInds[0], mouseInds[1]);
+  
+  drawRectHighlighter();
 }
