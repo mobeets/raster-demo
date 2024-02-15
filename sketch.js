@@ -9,16 +9,16 @@ let eventColor;
 let rectColor;
 
 // params for fake spike data
-let nNeurons = 20;
+let nNeurons = 50;
 let minRate = 0.025;
-let maxRate = 0.1;
-let nTimesteps = 5000; // total number of timesteps
-let maxDelay = 100;
+let maxRate = 0.15;
+let nTimesteps = 9000; // total number of timesteps
+let maxDelay = 200;
 
 // params for counting spikes
 let binSize = 200;
 let strideSize = 1;
-let timestepsPerFrame = 3;
+let timestepsPerFrame = 4;
 
 // for creating fake data
 let inputData;
@@ -74,14 +74,17 @@ function makeInputs(nTimesteps) {
 function makeSpikeTimes(inputData, nNeurons, minRate, maxRate, nTimesteps) {
   let rates = [];
   for (let j = 0; j < nNeurons; j++) {
-    let pBase = random(0.02, 0.03);
+    let pBase = random(0.01, 0.02);
     // let pStim = 0.1;
     // let pRew = 0.05;
-    let delay = floor(random(1, maxDelay));
-    let pStim = constrain(pBase + random(minRate, maxRate), minRate, maxRate);
-    let pRew = constrain(pBase + random(minRate, maxRate), minRate, maxRate);
+    // let delay = (j%2===0) ? maxDelay-11 : 1;
+    // delay += floor(random(1,10));
+    let delay = floor(random(1,maxDelay));
+    let pStim = maxRate;//random(minRate, maxRate);
+    let pRew = random(minRate, maxRate);
     rates.push([pBase, pStim, pRew, delay]);
   }
+  console.log(rates);
   return makeSpikeTimesFromRates(inputData, rates, nTimesteps);
 }
 
@@ -94,8 +97,8 @@ function makeSpikeTimesFromRates(inputData, rates, nTimesteps) {
 
   let cStim = 0;
   let cRew = 0;
-  let decayStim = 0.98; // time constant for stim
-  let decayRew = 0.98; // time constant for rew
+  let decayStim = 0.5; // time constant for stim
+  let decayRew = 0.5; // time constant for rew
 
   let inputs = [];
   for (let t = 0; t < maxDelay; t++) {
@@ -129,7 +132,7 @@ function makeSpikeTimesFromRates(inputData, rates, nTimesteps) {
 function setup() {
   bgColor = 'black';
   axisColor = 'white';
-  dotColor = color(255, 0, 0, 10);
+  dotColor = color(255, 0, 0, 30);
   dotColorActive = color(255, 0, 0, 180);
   spikeColor = color(255, 204, 0, 128);
   spikeColorActive = color(255, 204, 0, 255);
@@ -156,8 +159,8 @@ function setup() {
 }
 
 function scatter(x, y, xo, yo, axisLength) {
-  let xp = map(x, 0, 0.3*binSize, 0, axisLength);
-  let yp = map(y, 0, 0.3*binSize, 0, axisLength);
+  let xp = map(x, 0, 0.2*binSize, 0, axisLength);
+  let yp = map(y, 0, 0.2*binSize, 0, axisLength);
   circle(xo + xp, yo - yp, 10);
 }
 
@@ -167,8 +170,9 @@ function drawScatter(pts, counts, xi, yi) {
   let xo = windowWidth/2 + 0.2*axisLength;
   let yo = windowHeight/2 + axisLength/2;
   stroke(axisColor);
-  line(xo, yo, xo, yo-axisLength);
-  line(xo, yo, xo+axisLength, yo);
+  let axPadding = 8;
+  line(xo-axPadding, yo+axPadding, xo-axPadding, yo-axisLength);
+  line(xo-axPadding, yo+axPadding, xo+axisLength, yo+axPadding);
   
   fill(dotColor);
   noStroke();
@@ -246,12 +250,14 @@ function drawRectHighlighter() {
   }
 }
 
+// todo: infinite loop of data using mod t
+// make the whole thing horizontal instead of vertical
 function draw() {
   // update time step
   t = (t + timestepsPerFrame) % nTimesteps;
   
   // clear scatter points when time is up
-  if (t < timestepsPerFrame) { pts = []; }
+  // if (t < timestepsPerFrame) { pts = []; }
   
   // draw solid background
   background(bgColor);
