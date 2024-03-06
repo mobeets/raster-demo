@@ -1,4 +1,6 @@
-// color vars
+let darkMode = false;
+
+// display vars
 let bgColor;
 let axisColor;
 let labelColor;
@@ -6,8 +8,13 @@ let dotColor;
 let dotColorActive;
 let spikeColor;
 let spikeColorActive;
+let spikeColorHighlighted;
 let eventColor;
+let eventColorActive;
 let rectColor;
+let defaultTextSize = 18;
+let defaultFont = 'Courier New';
+let showScatter = true;
 
 // params for fake spike data
 let nNeurons = 20;
@@ -19,7 +26,7 @@ let maxDelay = 200;
 // params for counting spikes
 let binSize = 200;
 let strideSize = 1;
-let timestepsPerFrame = 4;
+let timestepsPerFrame = 1;
 
 // for creating fake data
 let inputData;
@@ -30,6 +37,10 @@ let padding;
 let rasterPosY;
 let rasterHeight;
 let rasterWidth;
+let rasterWindowStart;
+let scatterOriginX;
+let scatterOriginY;
+let scatterAxisLength;
 let pts;
 let mouseInds;
 let prevMouseInds;
@@ -85,7 +96,6 @@ function makeSpikeTimes(inputData, nNeurons, minRate, maxRate, nTimesteps) {
     let pRew = random(minRate, maxRate);
     rates.push([pBase, pStim, pRew, delay]);
   }
-  console.log(rates);
   return makeSpikeTimesFromRates(inputData, rates, nTimesteps);
 }
 
@@ -130,21 +140,35 @@ function makeSpikeTimesFromRates(inputData, rates, nTimesteps) {
   return sps;
 }
 
-function setup() {
-  bgColor = 'black';
-  axisColor = 'white';
-  labelColor = 'white';
+function setColors() {
+  if (darkMode) {
+    bgColor = 'black';
+    axisColor = 'white';
+    labelColor = 'white';
+    spikeColor = color(255, 204, 0, 128);
+    spikeColorActive = color(255, 204, 0, 255);
+    spikeColorHighlighted = 'red';
+    eventColor = 'gray';
+    eventColorActive = 'white';
+  } else {
+    bgColor = 'white';
+    axisColor = 'black';
+    labelColor = 'black';
+    spikeColor = 'lightgray';
+    spikeColorActive = 'black';
+    spikeColorHighlighted = 'red';
+    eventColor = 'lightgray';
+    eventColorActive = 'black';
+  }
   dotColor = color(255, 0, 0, 30);
   dotColorActive = color(255, 0, 0, 180);
-  spikeColor = color(255, 204, 0, 128);
-  spikeColorActive = color(255, 204, 0, 255);
   rectColor = color(255, 0, 0, 100);
-  eventColor = 'blue';
-  if (windowWidth > 500) {
-    textSize(18);
-  } else {
-    textSize(18);
-  }
+}
+
+function setup() {
+  setColors();
+  textSize(defaultTextSize);
+  textFont(defaultFont);
   
   t = 0;
   pts = [];
@@ -153,17 +177,26 @@ function setup() {
   inputData = makeInputs(nTimesteps);
   spikeTimes = makeSpikeTimes(inputData, nNeurons, minRate, maxRate, nTimesteps);
   
-  rasterWidth = windowWidth;
-  rasterHeight = windowHeight/2;
+  // rasterWidth = windowWidth;
+  // rasterHeight = windowHeight/2;
+  rasterWidth = window.innerWidth;
+  rasterHeight = window.innerHeight/2;
+  rasterWindowStart = rasterWidth/2 - binSize/2;
+  // rasterWindowStart = 0;
 
   // make room for one inputs
   padding = rasterHeight / (nNeurons+1);
   rasterPosY = 1*padding;
-  rasterHeight = rasterHeight - rasterPosY;
+  // rasterHeight = rasterHeight - rasterPosY;
+
+  scatterAxisLength = 0.9*windowHeight-rasterHeight;
+  scatterOriginX = window.innerWidth/2 - 0.5*scatterAxisLength;
+  scatterOriginY = windowHeight - 3*textSize();
 
   prevMouseInds = getHighlightedInds();
   mouseInds = prevMouseInds;
-  createCanvas(windowWidth, windowHeight);
+  // createCanvas(windowWidth, windowHeight);
+  createCanvas(window.innerWidth, window.innerHeight);
 }
 
 function scatter(x, y, xo, yo, axisLength) {
@@ -193,22 +226,22 @@ function drawScatter(pts, counts, xi, yi) {
   // let axisLength = 0.8*windowWidth/2;
   // let xo = windowWidth/2 + 0.2*axisLength;
   // let yo = windowHeight/2 + axisLength/2;
-  let axisLength = 0.9*windowHeight-rasterHeight;
-  let xo = windowWidth/2 - 0.5*axisLength;
-  let yo = windowHeight - 2*textSize();
+  // let axisLength = 0.9*windowHeight-rasterHeight;
+  // let xo = window.innerWidth/2 - 0.5*axisLength;
+  // let yo = windowHeight - 3*textSize();
   let axPadding = 8; // n.b. keeps axis away from data points
   stroke(axisColor);
-  line(xo-axPadding, yo+axPadding, xo-axPadding, yo-axisLength);
-  line(xo-axPadding, yo+axPadding, xo+axisLength, yo+axPadding);
+  line(scatterOriginX-axPadding, scatterOriginY+axPadding, scatterOriginX-axPadding, scatterOriginY-scatterAxisLength);
+  line(scatterOriginX-axPadding, scatterOriginY+axPadding, scatterOriginX+scatterAxisLength, scatterOriginY+axPadding);
   
   fill(dotColor);
   noStroke();
   for (let t = 0; t < pts.length; t++) {
-    scatter(pts[t][xi], pts[t][yi], xo, yo, axisLength);
+    scatter(pts[t][xi], pts[t][yi], scatterOriginX, scatterOriginY, scatterAxisLength);
   }
   fill(dotColorActive);
-  scatter(counts[xi], counts[yi], xo, yo, axisLength);
-  labelScatter(xo, yo, axisLength);
+  scatter(counts[xi], counts[yi], scatterOriginX, scatterOriginY, scatterAxisLength);
+  labelScatter(scatterOriginX, scatterOriginY, scatterAxisLength);
 }
 
 function getHighlightedInds() {
@@ -221,6 +254,10 @@ function getHighlightedInds() {
 
 function getNeuronHeight(j) {
   return rasterPosY + padding*j + padding/2;
+}
+
+function neuronIsHighlighted(j) {
+  return (j === mouseInds[0] || j === mouseInds[1]);
 }
 
 function drawInputData(inputData, t) {
@@ -238,7 +275,11 @@ function drawInputData(inputData, t) {
       }
 
       if (x >= 0 && x < rasterWidth) {
-        stroke(eventColor);
+        let clr = eventColor;
+        if (inCountingWindow(t, x)) {
+          clr = eventColorActive;
+        }
+        stroke(clr);
         line(x, y - 0.8*padding/2, x, y + 0.8*padding/2);
       }
     }
@@ -255,11 +296,15 @@ function labelRasters() {
   text('Stimulus', textPadding, y);
 
   for (let j = 0; j < nNeurons; j++) {
-    if (j === mouseInds[0] || j === mouseInds[1]) {
+    if (neuronIsHighlighted(j)) {
       let y = getNeuronHeight(j);
       text('Neuron ' + (j+1).toString(), textPadding, y);
     }
   }
+}
+
+function inCountingWindow(t, tSpike) {
+  return (tSpike >= rasterWindowStart) && (tSpike < rasterWindowStart + binSize);
 }
 
 function drawRasterAndCountSpikes(spikeTimes, t) {
@@ -281,10 +326,12 @@ function drawRasterAndCountSpikes(spikeTimes, t) {
       
       if (x >= 0 && x < rasterWidth) {
         let clr = spikeColor;
-        if (x < rasterWidth/2 - binSize/2) {
-        } else if (x > rasterWidth/2 + binSize/2) {
-        } else {
-          clr = spikeColorActive;
+        if (inCountingWindow(t, x)) {
+          if (neuronIsHighlighted(j)) {
+            clr = spikeColorHighlighted;
+          } else {
+            clr = spikeColorActive;
+          }
           count += 1;
         }
         stroke(clr);
@@ -299,31 +346,61 @@ function drawRasterAndCountSpikes(spikeTimes, t) {
 }
 
 function drawRectHighlighter() {
-  fill(rectColor);
-  noStroke();
-  // rect(rasterWidth/2 - binSize/2, 2, binSize, rasterHeight-4);
+  fill(rectColor); noStroke();
+  stroke(rectColor); strokeWeight(1); noFill();
   
   // draw rect around the neurons being highlighted by the mouse
   if (mouseInds[0] === mouseInds[1]-1) {
-    rect(rasterWidth/2 - binSize/2, getNeuronHeight(mouseInds[0])- padding/2, binSize, 2*padding);
+    rect(rasterWindowStart, getNeuronHeight(mouseInds[0])- padding/2, binSize, 2*padding);
   } else {
-    rect(rasterWidth/2 - binSize/2, getNeuronHeight(mouseInds[0])- padding/2, binSize, padding);
-    rect(rasterWidth/2 - binSize/2, getNeuronHeight(mouseInds[1])- padding/2, binSize, padding);
+    rect(rasterWindowStart, getNeuronHeight(mouseInds[0])- padding/2, binSize, padding);
+    rect(rasterWindowStart, getNeuronHeight(mouseInds[1])- padding/2, binSize, padding);
   }
 }
 
-// todo: infinite loop of data using mod t
-// make the whole thing horizontal instead of vertical
+function drawTitle() {
+  stroke(bgColor);
+  strokeWeight(10);
+  fill(labelColor);
+  textFont('Futura');
+  textAlign(CENTER, CENTER);
+  textSize(50);
+  text('Hennig\nLab', window.innerWidth/2, window.innerHeight/4);
+  textSize(defaultTextSize);
+  textFont(defaultFont);
+}
+
+function keyPressed() {
+  if (keyCode === 77) { // m
+    darkMode = !darkMode;
+    setColors();
+  } else if (keyCode === 173) { // -
+    timestepsPerFrame -= 1;
+    timestepsPerFrame = constrain(timestepsPerFrame, 1, 5);
+  } else if (keyCode === 61) { // +
+    timestepsPerFrame += 1;
+    timestepsPerFrame = constrain(timestepsPerFrame, 1, 5);
+  } else if (keyCode === 32) { // space
+    showScatter = !showScatter;
+  }
+}
+
 function draw() {
   // update time step
   t = (t + timestepsPerFrame) % nTimesteps;
   
-  // clear scatter points when time is up
-  // if (t < timestepsPerFrame) { pts = []; }
-  
   // draw solid background
   background(bgColor);
   
+  // get currently updated mouse inds
+  mouseInds = getHighlightedInds();
+  // if mouseInds changed since last time, clear pts
+  if (mouseInds[0] != prevMouseInds[0]) {
+    pts = [];
+  }
+  prevMouseInds = mouseInds;
+  drawRectHighlighter();
+
   // draw and count spikes
   drawInputData(inputData, t);
   counts = drawRasterAndCountSpikes(spikeTimes, t);
@@ -333,16 +410,9 @@ function draw() {
     pts.push(counts.slice());
   }
 
-  // get currently updated mouse inds
-  mouseInds = getHighlightedInds();
-  // if mouseInds changed since last time, clear pts
-  if (mouseInds[0] != prevMouseInds[0]) {
-    pts = [];
-  }
-  prevMouseInds = mouseInds;
-
   // draw scatter of spike rates
-  drawScatter(pts, counts, mouseInds[0], mouseInds[1]);
-  
-  drawRectHighlighter();
+  if (showScatter) {
+    drawScatter(pts, counts, mouseInds[0], mouseInds[1]);
+  }
+  // drawTitle();
 }
