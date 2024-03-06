@@ -140,7 +140,11 @@ function setup() {
   spikeColorActive = color(255, 204, 0, 255);
   rectColor = color(255, 0, 0, 100);
   eventColor = 'blue';
-  textSize(14);
+  if (windowWidth > 500) {
+    textSize(18);
+  } else {
+    textSize(18);
+  }
   
   t = 0;
   pts = [];
