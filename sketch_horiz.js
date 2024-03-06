@@ -9,7 +9,7 @@ let eventColor;
 let rectColor;
 
 // params for fake spike data
-let nNeurons = 20;
+let nNeurons = 50;
 let minRate = 0.025;
 let maxRate = 0.15;
 let nTimesteps = 9000; // total number of timesteps
@@ -146,13 +146,13 @@ function setup() {
   inputData = makeInputs(nTimesteps);
   spikeTimes = makeSpikeTimes(inputData, nNeurons, minRate, maxRate, nTimesteps);
   
-  rasterWidth = windowWidth;
-  rasterHeight = windowHeight/2;
+  rasterWidth = windowWidth/2;
+  rasterHeight = windowHeight;
 
   // make room for one inputs
-  padding = rasterHeight / (nNeurons+1);
+  padding = windowHeight / (nNeurons+1);
   rasterPosY = 1*padding;
-  rasterHeight = rasterHeight - rasterPosY;
+  rasterHeight = windowHeight - rasterPosY;
 
   prevMouseInds = getHighlightedInds();
   createCanvas(windowWidth, windowHeight);
@@ -166,14 +166,11 @@ function scatter(x, y, xo, yo, axisLength) {
 
 function drawScatter(pts, counts, xi, yi) {
   
-  // let axisLength = 0.8*windowWidth/2;
-  // let xo = windowWidth/2 + 0.2*axisLength;
-  // let yo = windowHeight/2 + axisLength/2;
-  let axisLength = 0.9*windowHeight-rasterHeight;
-  let xo = windowWidth/2 - 0.5*axisLength;
-  let yo = windowHeight - 25;
-  let axPadding = 8; // n.b. keeps axis away from data points
+  let axisLength = 0.8*windowWidth/2;
+  let xo = windowWidth/2 + 0.2*axisLength;
+  let yo = windowHeight/2 + axisLength/2;
   stroke(axisColor);
+  let axPadding = 8;
   line(xo-axPadding, yo+axPadding, xo-axPadding, yo-axisLength);
   line(xo-axPadding, yo+axPadding, xo+axisLength, yo+axPadding);
   
@@ -188,9 +185,6 @@ function drawScatter(pts, counts, xi, yi) {
 
 function getHighlightedInds() {
   let mouseInd = floor(map(constrain(mouseY, rasterPosY, rasterPosY+rasterHeight), rasterPosY, rasterPosY+rasterHeight, 0, nNeurons-1));
-  if (mouseInd+1 >= nNeurons) {
-    mouseInd -= 1;
-  }
   return [mouseInd, mouseInd+1];
 }
 
