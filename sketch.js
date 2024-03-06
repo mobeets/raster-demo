@@ -13,7 +13,7 @@ let rectColor;
 let nNeurons = 20;
 let minRate = 0.025;
 let maxRate = 0.15;
-let nTimesteps = 1000; // total number of timesteps
+let nTimesteps = 8000; // total number of timesteps
 let maxDelay = 200;
 
 // params for counting spikes
@@ -226,7 +226,14 @@ function drawInputData(inputData, t) {
     for (let i = 0; i < eventTimes[j].length; i++) {
       let y = getNeuronHeight(j) - 1*padding;
       let x = eventTimes[j][i] - t;
-      if (x < rasterWidth) {
+      
+      // allows event times to wrap
+      let x1 = eventTimes[j][i] - t + nTimesteps;
+      if (x1 >= 0 && x1 < rasterWidth) {
+        x = x1;
+      }
+
+      if (x >= 0 && x < rasterWidth) {
         stroke(eventColor);
         line(x, y - 0.8*padding/2, x, y + 0.8*padding/2);
       }
@@ -260,11 +267,15 @@ function drawRasterAndCountSpikes(spikeTimes, t) {
     let count = 0;
     for (let i = 0; i < spikeTimes[j].length; i++) {
       let y = getNeuronHeight(j);
-      // let x = t - spikeTimes[j][i] + rasterWidth;
-      // let x = (spikeTimes[j][i] % nTimesteps) - t;
       let x = spikeTimes[j][i] - t;
+
+      // allows spike times to wrap
+      let x1 = spikeTimes[j][i] - t + nTimesteps;
+      if (x1 >= 0 && x1 < rasterWidth) {
+        x = x1;
+      }
       
-      if (x < rasterWidth) {
+      if (x >= 0 && x < rasterWidth) {
         let clr = spikeColor;
         if (x < rasterWidth/2 - binSize/2) {
         } else if (x > rasterWidth/2 + binSize/2) {
@@ -314,7 +325,7 @@ function draw() {
   counts = drawRasterAndCountSpikes(spikeTimes, t);
   
   // save spike count vector every stride
-  if (t > binSize && t % strideSize === 0) {
+  if (t % strideSize === 0) {
     pts.push(counts.slice());
   }
 
