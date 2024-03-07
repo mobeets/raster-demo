@@ -22,6 +22,7 @@ let minRate = 0.025;
 let maxRate = 0.15;
 let nTimesteps = 8000; // total number of timesteps
 let maxDelay = 200;
+let infoDuration = 50; // duration of info boxes
 
 // params for counting spikes
 // let binSize = 200;
@@ -235,23 +236,28 @@ class Data {
     let textPadding = 5;
     
     let y = getNeuronHeight(-1);
-    text('stimulus', textPadding, y);
+    // text('stimulus', textPadding, y);
+    textAlign(RIGHT, CENTER);
+    text('stimulus', rasterWindowStart - textPadding, y);
 
     for (let j = 0; j < this.neurons.length; j++) {
       if (neuronIsHighlighted(j)) {
         let y = getNeuronHeight(j);
-        text('neuron ' + (j+1).toString(), textPadding, y);
+        // text('neuron ' + (j+1).toString(), textPadding, y);
+        text('neuron ' + (j+1).toString(), rasterWindowStart - textPadding, y);
       }
     }
   }
 
-  render() {
+  render(showLabels) {
     this.stimulus.render();
     let counts = [];
     for (let j = 0; j < this.neurons.length; j++) {
       counts.push(this.neurons[j].render());
     }
-    this.renderLabels();
+    if (showLabels) {
+      this.renderLabels();
+    }
     return counts;
   }
 }
@@ -294,20 +300,27 @@ function setup() {
   rasterHeight = 2*window.innerHeight/3;
   binSize = min(200, rasterWidth/2);
   rasterWindowStart = rasterWidth - binSize;
+
+  // define scatter plot location
+  scatterAxisLength = 0.9*windowHeight-rasterHeight;
+  if (window.innerWidth > 500) {
+    rasterHeight = window.innerHeight;
+    scatterOriginX = 3*textSize();
+    scatterOriginY = windowHeight - 3*textSize();
+  } else {
+    scatterOriginX = window.innerWidth/2 - 0.5*scatterAxisLength;
+    scatterOriginY = windowHeight - 3*textSize();
+  }
+
+  // make room for one input
+  padding = rasterHeight / (nNeurons+1);
+  rasterPosY = 1*padding;
+  prevMouseInds = getHighlightedInds();
+  mouseInds = prevMouseInds;
   
   // make data
   data = new Data(rasterWidth);
 
-  // make room for one inputs
-  padding = rasterHeight / (nNeurons+1);
-  rasterPosY = 1*padding;
-
-  scatterAxisLength = 0.9*windowHeight-rasterHeight;
-  scatterOriginX = window.innerWidth/2 - 0.5*scatterAxisLength;
-  scatterOriginY = windowHeight - 3*textSize();
-
-  prevMouseInds = getHighlightedInds();
-  mouseInds = prevMouseInds;
   createCanvas(window.innerWidth, window.innerHeight);
 }
 
@@ -334,14 +347,12 @@ function labelScatter(xo, yo, axisLength) {
 }
 
 function drawScatter(pts, counts, xi, yi) {
-  
-  // let axisLength = 0.8*windowWidth/2;
-  // let xo = windowWidth/2 + 0.2*axisLength;
-  // let yo = windowHeight/2 + axisLength/2;
-  // let axisLength = 0.9*windowHeight-rasterHeight;
-  // let xo = window.innerWidth/2 - 0.5*axisLength;
-  // let yo = windowHeight - 3*textSize();
   let axPadding = 8; // n.b. keeps axis away from data points
+
+  fill(bgColor);
+  noStroke();
+  rect(scatterOriginX-axPadding, scatterOriginY+axPadding, scatterAxisLength+axPadding, -scatterAxisLength-axPadding);
+
   stroke(axisColor);
   line(scatterOriginX-axPadding, scatterOriginY+axPadding, scatterOriginX-axPadding, scatterOriginY-scatterAxisLength);
   line(scatterOriginX-axPadding, scatterOriginY+axPadding, scatterOriginX+scatterAxisLength, scatterOriginY+axPadding);
@@ -417,7 +428,6 @@ function keyPressed() {
 }
 
 function draw() {
-  
   // draw solid background
   background(bgColor);
   
@@ -432,7 +442,7 @@ function draw() {
 
   // draw and count spikes
   data.update(timestepsPerFrame);
-  counts = data.render();
+  counts = data.render(true);
 
   // save spike count vector every stride
   // update time step
@@ -445,5 +455,5 @@ function draw() {
   if (showScatter) {
     drawScatter(pts, counts, mouseInds[0], mouseInds[1]);
   }
-  // drawTitle();
+  drawTitle();
 }
