@@ -17,7 +17,7 @@ let defaultFont = 'Courier New';
 let showScatter = true;
 
 // params for fake spike data
-let nNeurons = 20;
+let nNeurons = 30;
 let minRate = 0.025;
 let maxRate = 0.15;
 let nTimesteps = 8000; // total number of timesteps
@@ -32,6 +32,8 @@ let timestepsPerFrame = 1;
 
 let data;
 let t;
+let cnvWidth;
+let cnvHeight;
 let padding;
 let rasterPosY;
 let rasterHeight;
@@ -294,23 +296,33 @@ function setup() {
   
   t = 0;
   pts = [];
-  
+
+  // define canvas size based on window
+  cnvWidth = window.innerWidth;
+  cnvHeight = window.innerHeight;
+  rasterWidth = cnvWidth;
+  let maxScatterAxisLength = 250;
+
+  if (cnvWidth > 700) { // scatter on raster
+    if (cnvHeight > 800) { // don't use all height
+      cnvHeight *= 3/4;
+    }
+    rasterHeight = cnvHeight;
+
+    scatterAxisLength = min(maxScatterAxisLength, min(rasterWidth, rasterHeight)/2);
+    scatterOriginX = 3*textSize();
+    scatterOriginY = cnvHeight - 3*textSize();
+
+  } else { // scatter below raster
+    rasterHeight = 2*cnvHeight/3;
+    scatterAxisLength = min(maxScatterAxisLength, cnvHeight/3 - 3.1*textSize());
+    scatterOriginX = cnvWidth/2 - 0.5*scatterAxisLength;
+    scatterOriginY = cnvHeight - 3*textSize();
+  }
+
   // define raster size based on window size
-  rasterWidth = window.innerWidth;
-  rasterHeight = 2*window.innerHeight/3;
   binSize = min(200, rasterWidth/2);
   rasterWindowStart = rasterWidth - binSize;
-
-  // define scatter plot location
-  scatterAxisLength = 0.9*windowHeight-rasterHeight;
-  if (window.innerWidth > 500) {
-    rasterHeight = window.innerHeight;
-    scatterOriginX = 3*textSize();
-    scatterOriginY = windowHeight - 3*textSize();
-  } else {
-    scatterOriginX = window.innerWidth/2 - 0.5*scatterAxisLength;
-    scatterOriginY = windowHeight - 3*textSize();
-  }
 
   // make room for one input
   padding = rasterHeight / (nNeurons+1);
@@ -321,7 +333,7 @@ function setup() {
   // make data
   data = new Data(rasterWidth);
 
-  createCanvas(window.innerWidth, window.innerHeight);
+  createCanvas(cnvWidth, cnvHeight);
 }
 
 function scatter(x, y, xo, yo, axisLength) {
@@ -407,7 +419,7 @@ function drawTitle() {
   textFont('Futura');
   textAlign(CENTER, CENTER);
   textSize(50);
-  text('Hennig\nLab', window.innerWidth/2, window.innerHeight/4);
+  text('Hennig\nLab', cnvWidth/2, cnvHeight/4);
   textSize(defaultTextSize);
   textFont(defaultFont);
 }
