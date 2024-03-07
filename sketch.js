@@ -12,7 +12,7 @@ let spikeColorHighlighted;
 let eventColor;
 let eventColorActive;
 let rectColor;
-let defaultTextSize = 18;
+let defaultTextSize = 16;
 let defaultFont = 'Courier New';
 let showScatter = true;
 
@@ -180,7 +180,7 @@ function setup() {
   // rasterWidth = windowWidth;
   // rasterHeight = windowHeight/2;
   rasterWidth = window.innerWidth;
-  rasterHeight = window.innerHeight/2;
+  rasterHeight = 2*window.innerHeight/3;
   rasterWindowStart = rasterWidth/2 - binSize/2;
   // rasterWindowStart = 0;
 
@@ -414,5 +414,5 @@ function draw() {
   if (showScatter) {
     drawScatter(pts, counts, mouseInds[0], mouseInds[1]);
   }
-  // drawTitle();
+  drawTitle();
 }
