@@ -305,7 +305,7 @@ function setup() {
 
   if (cnvWidth > 700) { // scatter on raster
     if (cnvHeight > 800) { // don't use all height
-      cnvHeight *= 3/4;
+      cnvHeight *= 1/2;
     }
     rasterHeight = cnvHeight;
 
@@ -314,6 +314,7 @@ function setup() {
     scatterOriginY = cnvHeight - 3*textSize();
 
   } else { // scatter below raster
+    cnvHeight *= 0.9;
     rasterHeight = 2*cnvHeight/3;
     scatterAxisLength = min(maxScatterAxisLength, cnvHeight/3 - 3.1*textSize());
     scatterOriginX = cnvWidth/2 - 0.5*scatterAxisLength;
@@ -419,7 +420,7 @@ function drawTitle() {
   textFont('Futura');
   textAlign(CENTER, CENTER);
   textSize(50);
-  text('Hennig\nLab', cnvWidth/2, cnvHeight/4);
+  text('Hennig\nLab', cnvWidth/2, 1.7*rasterHeight/4);
   textSize(defaultTextSize);
   textFont(defaultFont);
 }
