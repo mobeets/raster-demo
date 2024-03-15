@@ -178,7 +178,6 @@ class Stimulus {
       this.stepsSinceLastClick = 0;
 
     } else if (this.screensaverOn) {
-      text('screensaver', 50, 50);
       // screensaver on
       
       if (this.autoStimDur > 0) {
