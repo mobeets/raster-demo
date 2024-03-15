@@ -153,9 +153,12 @@ class Stimulus {
   constructor(nTimesteps) {
     this.nTimesteps = nTimesteps;
     this.history = this.fill(nTimesteps);
-    this.stepsSinceLastClick = 0;
-    this.maxStimGap = 1000; // max number of timesteps without stim
+    this.timeSinceAutoStim = 0;
+    this.maxAutoStimDelay = 350; // max number of timesteps without stim
+    this.stepsSinceLastClick = 490;
+    this.screensaverDelayTime = 500; // max number of timesteps without stim
     this.autoStimDur = 0;
+    this.screensaverOn = false;
   }
 
   fill(nTimesteps) {
@@ -168,18 +171,43 @@ class Stimulus {
 
   update() {
     if (mouseIsPressed === true) {
+      // mouse pressed
+      
+      this.history.push(1);
+      this.screensaverOn = false;
       this.stepsSinceLastClick = 0;
-      this.history.push(1);
-    } else if (this.autoStimDur > 0) {
-      this.autoStimDur -= 1;
-      this.history.push(1);
+
+    } else if (this.screensaverOn) {
+      text('screensaver', 50, 50);
+      // screensaver on
+      
+      if (this.autoStimDur > 0) {
+        // auto-stim on
+        this.timeSinceAutoStim = 0;
+        this.autoStimDur -= 1;
+        this.history.push(1);
+
+      } else {
+        // auto-stim off
+        this.history.push(0);
+        this.timeSinceAutoStim += 1;
+        if (this.timeSinceAutoStim > this.maxAutoStimDelay) {
+          this.autoStimDur = floor(random(100, 400));
+        }
+
+      }
+
     } else {
+      // nothing pressed, and screensaver off
+      
       this.history.push(0);
       this.stepsSinceLastClick += 1;
-      if (this.stepsSinceLastClick > this.maxStimGap) {
-        this.stepsSinceLastClick = 0;
-        this.autoStimDur = floor(random(100, 200));
+      if (this.stepsSinceLastClick > this.screensaverDelayTime) {
+        this.screensaverOn = true;
+        this.autoStimDur = 0;
+        this.timeSinceAutoStim = this.maxAutoStimDelay; // screensaver starts with stim
       }
+
     }
     this.history = this.history.slice(-this.nTimesteps); // only keep most recent entries
   }
